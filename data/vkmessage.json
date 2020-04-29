@@ -1,0 +1,71 @@
+{
+  "id": 2,
+  "from_id": -193771849,
+  "owner_id": -193771849,
+  "date": 1588173154,
+  "marked_as_ads": 0,
+  "post_type": "post",
+  "text": "#замены",
+  "can_edit": 1,
+  "created_by": 212198244,
+  "can_delete": 1,
+  "attachments": [
+    {
+      "type": "photo",
+      "photo": {
+        "id": 457239017,
+        "album_id": -7,
+        "owner_id": -193771849,
+        "user_id": 100,
+        "photo_75": "https://sun9-38.userapi.com/c840329/v840329318/cde8/UymedSrxhsE.jpg",
+        "photo_130": "https://sun9-48.userapi.com/c840329/v840329318/cde9/V33aPlilcGE.jpg",
+        "photo_604": "https://sun9-38.userapi.com/c840329/v840329318/cdea/H-kLHrs__wY.jpg",
+        "photo_807": "https://sun9-11.userapi.com/c840329/v840329318/cdeb/dHft4lHtLao.jpg",
+        "width": 807,
+        "height": 807,
+        "text": "",
+        "date": 1588173154,
+        "post_id": 2,
+        "access_key": "bbf1d4c4fc10ad74e9"
+      }
+    }
+  ],
+  "comments": {
+    "count": 0
+  }
+}{
+  "id": 2,
+  "from_id": -193771849,
+  "owner_id": -193771849,
+  "date": 1588173154,
+  "marked_as_ads": 0,
+  "post_type": "post",
+  "text": "#замены",
+  "can_edit": 1,
+  "created_by": 212198244,
+  "can_delete": 1,
+  "attachments": [
+    {
+      "type": "photo",
+      "photo": {
+        "id": 457239017,
+        "album_id": -7,
+        "owner_id": -193771849,
+        "user_id": 100,
+        "photo_75": "https://sun9-38.userapi.com/c840329/v840329318/cde8/UymedSrxhsE.jpg",
+        "photo_130": "https://sun9-48.userapi.com/c840329/v840329318/cde9/V33aPlilcGE.jpg",
+        "photo_604": "https://sun9-38.userapi.com/c840329/v840329318/cdea/H-kLHrs__wY.jpg",
+        "photo_807": "https://sun9-11.userapi.com/c840329/v840329318/cdeb/dHft4lHtLao.jpg",
+        "width": 807,
+        "height": 807,
+        "text": "",
+        "date": 1588173154,
+        "post_id": 2,
+        "access_key": "bbf1d4c4fc10ad74e9"
+      }
+    }
+  ],
+  "comments": {
+    "count": 0
+  }
+}
