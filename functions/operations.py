@@ -8,11 +8,15 @@ logging.basicConfig(format=u'\n\n|LOG_START|\n\t%(filename)s[LINE:%(lineno)d]#\n
 logger = logging.getLogger(__name__)
 
 
-def ExecuteActions(url, reqstType="GET", headers=None, sending_body=None):
+def ExecuteActions(url, reqstType="GET", sending_body=None, authToken=None, headers=None, verify=False):
     response = ''
+    default_headers = {'Content-type': 'application/json',  # Определение типа данных
+                       'Accept': 'text/plain',
+                       'Content-Encoding': 'utf-8'}
     try:
         if((sending_body is not None and reqstType == "GET") or (reqstType == "POST" and sending_body is not None)):
-            response = requests.post(url, json=sending_body, headers=headers, verify=False)
+            response = requests.post(
+                url, json=sending_body, headers=headers, verify=False)
         elif(reqstType == "PUT"):
             response = requests.put(url, json=sending_body, verify=False)
         elif(reqstType == "GET"):
@@ -23,9 +27,9 @@ def ExecuteActions(url, reqstType="GET", headers=None, sending_body=None):
             response = requests.delete(url, verify=False)
 
         if (response.status_code == 200):
-            return  response.json()
+            return response.json()
         else:
-            return {'status_code': response.status_code, 'content': response.reason}
+            return response.json()
     except OSError as e:
         logger.error(e)
         # logger.error(e, exc_info=True)
@@ -42,11 +46,12 @@ def get_command(text):
         if(check_command(command)):
             return command
     return 404
-        
+
 
 def check_command(command):
     try:
-        response = requests.get("https://localhost:7001/api/bot/checkStep/" + command, verify=False)
+        response = requests.get(
+            "https://localhost:7001/api/bot/checkStep/" + command, verify=False)
         if (response.status_code == 200):
             return True
         elif(response.status_code == 404):

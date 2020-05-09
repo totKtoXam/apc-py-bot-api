@@ -38,44 +38,4 @@
       "condition": "ROLE_IS_ENROLLEE"
     }
   ]
-}{
-  "stepId": "00028a9a-48fe-418f-9f7b-dcb3129d9202",
-  "stepName": "Здравствуйте! Выберите свою роль:",
-  "stepCode": "start",
-  "stepCondition": "ON_START",
-  "actionList": [
-    {
-      "isEdit": true,
-      "prevStepId": "00028a9a-48fe-418f-9f7b-dcb3129d9202",
-      "prevStepCode": "start",
-      "nextStepId": "64b44419-aa5b-4cc7-af43-9ba780d5f4ac",
-      "nextStepCode": "EMAIL_ENTER",
-      "id": "06ef747c-2df3-43b8-b916-ae2cae8e9e3f",
-      "name": "студент",
-      "code": "ROLE_IS_STUDENT",
-      "condition": "ROLE_IS_STUDENT"
-    },
-    {
-      "isEdit": true,
-      "prevStepId": "00028a9a-48fe-418f-9f7b-dcb3129d9202",
-      "prevStepCode": "start",
-      "nextStepId": "64b44419-aa5b-4cc7-af43-9ba780d5f4ac",
-      "nextStepCode": "EMAIL_ENTER",
-      "id": "75075e15-98b5-4c46-97c0-3a587bcaf38d",
-      "name": "преподаватель",
-      "code": "ROLE_IS_TEACHER",
-      "condition": "ROLE_IS_TEACHER"
-    },
-    {
-      "isEdit": true,
-      "prevStepId": "00028a9a-48fe-418f-9f7b-dcb3129d9202",
-      "prevStepCode": "start",
-      "nextStepId": "64b44419-aa5b-4cc7-af43-9ba780d5f4ac",
-      "nextStepCode": "EMAIL_ENTER",
-      "id": "adee12bd-b3df-4059-9148-e67ea03f8e2c",
-      "name": "абитуриент",
-      "code": "ROLE_IS_ENROLLEE",
-      "condition": "ROLE_IS_ENROLLEE"
-    }
-  ]
 }

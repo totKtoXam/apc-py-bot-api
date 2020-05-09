@@ -6,7 +6,7 @@ TELE_BOT_NAME = "AstanaPolytechCollegeBot"
 TELE_BOT_PROFILE_URL = "https://t.me/AstanaPolytechCollegeBot"
 
 VK_API_KEY = "eee2e56af72e125b7511d765e3920fb247a002787383b55bbdd893e886526999e189ae920e8ecc441a03b"
-SERVER_COMFIRMATION_KEY = "49cb270d"
+SERVER_COMFIRMATION_KEY = "0b90a5d0"
 SERVER_SECRET_KEY = "Uagcf4K4RRchIyHQlNjHWlIZdb35gsLe"
 
 DEV_CHAT_ID = 757051459
@@ -14,14 +14,15 @@ DEV_CHAT_ID = 757051459
 MAX_LOG_COUNT = 200
 startLog = "|LOG_START|"
 
-CSHARP_API_URL = "https://localhost:7001/api/bot/"  # local
+CSHARP_API_URL = "https://localhost:7001/api/"
+CSHARP_API_BOT_URL = "https://localhost:7001/api/bot/"  # local
 
 
 LOCAL_COMMANDS = ["/getimg", "/test"]
 
 
 def GetUrlBotApiInfo(*apiLinks):
-    apiUrl = CSHARP_API_URL + "actions/"
+    apiUrl = CSHARP_API_BOT_URL + "actions/"
     for link in apiLinks:
         apiUrl += link + "/"
     return apiUrl
@@ -50,6 +51,5 @@ def write_json(data, fileName="answer.json"):
         try:
             json.dump(data, f, indent=2, ensure_ascii=False)
         except Exception as ex:
+            # json.dump(data, f, indent=2, ensure_ascii=False)
             print(ex)
-        else:
-            json.dump(data, f, indent=2, ensure_ascii=False)

@@ -10,6 +10,7 @@ import functions.operations as opers
 import platform
 import time
 from models.client import StudentClient, TeacherClient, EnrolleeClient, Client
+from models.sendler import create_sendler_form, GetAttachments, ApplySending
 from validate_email import validate_email
 import re
 import jsons
@@ -47,7 +48,7 @@ teleBot = telebot.TeleBot(config.TELEGRAM_BOT_TOKEN, threaded=False)
 teleBot.remove_webhook()
 time.sleep(1)
 teleBot.set_webhook(
-    url="https://b591326a.ngrok.io/api/tele/{}".format(config.TELEGRAM_BOT_TOKEN))
+    url="https://7b6b159d.ngrok.io/api/tele/{}".format(config.TELEGRAM_BOT_TOKEN))
 
 
 @app.route("/api/tele/{}".format(config.TELEGRAM_BOT_TOKEN), methods=['GET', 'POST'])
@@ -79,7 +80,26 @@ def vkGetPosts():
     if data['type'] == 'confirmation':
         return config.SERVER_COMFIRMATION_KEY
     else:
-        write_json(data['object'], fileName="vkmessage")
+        write_json(data['object'], fileName="postFile")
+        result = create_sendler_form(data['object'])
+        result.Attachments = GetAttachments(data['object'])
+        url = config.CSHARP_API_URL + "sendler/vkpost"
+        headers = {'Content-type': 'application/json',  # Определение типа данных
+                   'Accept': 'text/plain',
+                   'Content-Encoding': 'utf-8'}
+        if ((result is not None) and result != 400):
+            write_json(data=result.__dict__, fileName="postresult")
+            # write_json(data=jsons.dump(result.__dict__), fileName="postresult")
+            response = opers.ExecuteActions(
+                url=url, reqstType="POST", sending_body=jsons.dump(result.__dict__), headers=headers)
+            if ("status_code" in response):
+                send_error_message_to_developer(response)
+            else:
+                write_json(data=response, fileName="responseSendler")
+                ApplySending(data=response, teleBot=teleBot, vkBot=vkapi.api)
+            return 'ok'
+            # if (response == "REQUEST_ERROR")
+    return 'ok'
     # data = json.loads(request.data)
     # if 'type' not in data.keys():
     #     return {"status_code": "404", "content": "NOT_VK"}
@@ -96,6 +116,7 @@ def vkGetPosts():
 @app.route("/api/sendler", methods=['POST'])
 def Sendler():
     data = json.loads(request.data)
+    write_json(data, fileName="post")
 
 
 @app.route("/", methods=['GET'])
@@ -106,12 +127,13 @@ def MainIndex():
 
 @teleBot.message_handler(content_types=['text'])
 def onIncommingMessages(message):
+    command = opers.get_command(message.text)
+    write_json(data=message.chat.__dict__, fileName="telemessage")
     if (message.text in config.LOCAL_COMMANDS):
         text = "на тебе фото"
         imgUrl = "https://sun9-11.userapi.com/c840329/v840329318/cdeb/dHft4lHtLao.jpg"
         teleBot.send_message(message.chat.id, f'{text}\n{imgUrl}')
     elif ((command is not None) and command != 404):
-        command = opers.get_command(message.text)
         client.ChatId = str(message.chat.id)
         url = GetUrlBotApiInfo(command)
         response_result = opers.ExecuteActions(url)
@@ -228,13 +250,12 @@ def get_phone(message):
         pass
     else:
         phone = get_and_send_msg_text(
-            message, "Отлично! Ожидайте ответа. Введите /help, чтобы получить больше информации.", 2, create_post_client)
+            message, "Отлично! Ожидайте ответа. Введите /help, чтобы получить больше информации.", 2, create_post_client_from_tele)
     if (phone != "-"):
         client.Phone = phone
 
+
 # teacher
-
-
 def get_teacher_iin(message):
     # client.TeacherIIN
     iin = get_and_send_msg_text(
@@ -254,15 +275,16 @@ def get_ticket_number(message):
 
 def get_group(message):
     client.Group = get_and_send_msg_text(
-        message, "Отлично! Ожидайте ответа. Введите /help, чтобы получить больше информации.", 2, create_post_client)
+        message, "Отлично! Ожидайте ответа. Введите /help, чтобы получить больше информации.", 2, create_post_client_from_tele)
 
 
-def create_post_client(message):
+def create_post_client_from_tele(message):
+    client.BotChannel = "TELEGRAM"
     data = jsons.dump(client.__dict__)
     headers = {'Content-type': 'application/json',  # Определение типа данных
                'Accept': 'text/plain',
                'Content-Encoding': 'utf-8'}
-    response_result = opers.ExecuteActions(url=config.CSHARP_API_URL +
+    response_result = opers.ExecuteActions(url=config.CSHARP_API_BOT_URL +
                                            "createClient", reqstType='POST', headers=headers, sending_body=data)
     if (response_result == "REQUEST_ERROR"):
         server_error(message)
@@ -273,7 +295,9 @@ def create_post_client(message):
         else:
             client.ClientBotId = response_result['clientBotId']
             get_and_send_msg_text(
-                message, "Регистрация прошла успешно! Подтвердите эл. почту, чтобы получать необходимую информацию. Введите /help, чтобы получить больше инфорации.")
+                message,
+                "Регистрация прошла успешно! Подтвердите эл. почту, чтобы получать необходимую информацию и рассылку. Введите /help, чтобы получить больше инфорации." +
+                "Ожидайте активации учётной записи администратором." if "TEACHER" in client.RoleCode else "")
 
 
 def get_and_send_msg_text(message, text="Бот сломался ;D", type_s=0, func=None):

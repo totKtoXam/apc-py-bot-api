@@ -22,7 +22,7 @@ def get_answer(body):
 def create_answer(data, token):
     user_id = data['user_id']
     message = get_answer(data['body'].lower())
-    send_message(user_id, token, message)
+    send_message(user_id, token, message, attachment="photo-193771849_457239021")
 
 # def get_and_set_messge():
 #     if ()
