@@ -48,7 +48,7 @@ teleBot = telebot.TeleBot(config.TELEGRAM_BOT_TOKEN, threaded=False)
 teleBot.remove_webhook()
 time.sleep(1)
 teleBot.set_webhook(
-    url="https://7b6b159d.ngrok.io/api/tele/{}".format(config.TELEGRAM_BOT_TOKEN))
+    url="https://e0ee9fff.ngrok.io/api/tele/{}".format(config.TELEGRAM_BOT_TOKEN))
 
 
 @app.route("/api/tele/{}".format(config.TELEGRAM_BOT_TOKEN), methods=['GET', 'POST'])
@@ -67,8 +67,9 @@ def vkGetMessages():
     if data['type'] == 'confirmation':
         return config.SERVER_COMFIRMATION_KEY
     elif data['type'] == 'message_new':
-        vkapi.create_answer(data['object'], config.VK_API_KEY)
-        write_json(data['object'], fileName="vkmessage")
+        vkapi.create_answer(data['object'], config.VK_API_KEY)           
+        write_json(data, fileName="vkmessage")
+        # write_json(data['object'], fileName="vkmessage")
         return 'ok'
 
 
@@ -338,7 +339,7 @@ def check_local_command(command):
 
 
 if __name__ == "__main__":
-    app.run(host='localhost', port=5000, debug=True)
+    app.run(host='localhost', port=4001, debug=True)
 # try:
 #     teleBot.polling(timeout=30)
 # except:

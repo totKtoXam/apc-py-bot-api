@@ -22,16 +22,6 @@ class PostAttachment:
 
     AccessKey = ""
 
-    def clear(self):
-        self.Type = ""
-        self.Id = 0
-        self.OwnerId = 0
-        self.Url = ""
-        self.Title = ""
-        self.Text = ""
-        self.Ext = ""
-        self.AccessKey = ""
-
 
 def create_sendler_form(data):
     sendler_form = SendlerForm()
@@ -84,8 +74,8 @@ def ApplySending(data=None, teleBot=None, vkBot=None):
                     if (teleBot is not None):
                         if (("teleChatId" in student) and (student["teleChatId"] is not None)):
                             teleBot.send_message(
-                                student["teleChatId"], f'{sending_file["text"] if "text" in sending_file else ""}\n{sending_file["url"]}')
+                                student["teleChatId"], f'{data["text"]}\n{sending_file["text"] if "text" in sending_file else data["text"]}\n{sending_file["url"]}')
                     if (vkBot is not None):
                         if (("vkChatId" in student) and (student["vkChatId"] is not None)):
                             vkBot.messages.send(access_token="eee2e56af72e125b7511d765e3920fb247a002787383b55bbdd893e886526999e189ae920e8ecc441a03b",
-                                                user_id=student["vkChatId"], message="", attachment="photo" + sending_file["ownerId"]["id"])
+                                                user_id=student["vkChatId"], message=data["text"], attachment="photo" + sending_file["ownerId"]["id"])
