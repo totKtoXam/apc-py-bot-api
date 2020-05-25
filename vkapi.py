@@ -161,3 +161,10 @@ def get_keyboard(buttons=[], one_time=False, inline=False, lineLenght=4):
         "one_time": one_time,
         "buttons": btnLines
     }
+
+
+def check_server_key(data):
+    if(data["secret"] == config.SERVER_SECRET_KEY):
+        return True
+    else:
+        return False

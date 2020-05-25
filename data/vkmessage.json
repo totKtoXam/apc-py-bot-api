@@ -1,15 +1,16 @@
 {
   "type": "message_new",
   "object": {
-    "id": 159,
-    "date": 1589953510,
+    "id": 183,
+    "date": 1590242985,
     "out": 0,
-    "user_id": 212198244,
+    "user_id": 174326884,
     "read_state": 0,
     "title": "",
-    "body": "bnt6",
+    "body": "нет",
     "owner_ids": []
   },
   "group_id": 193771849,
-  "event_id": "7c6b66a837fd59a62f1f4d3297ceebee72e07a1a"
+  "event_id": "aeef60090d3070a17a59089c8d18feaf527c25c2",
+  "secret": "FF4DDB22A5AD7A7853E74B2FDB524"
 }
