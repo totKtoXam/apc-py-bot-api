@@ -1,6 +1,8 @@
 import requests
 import logging
 import re
+import json
+import jsons
 
 logging.basicConfig(format=u'\n\n|LOG_START|\n\t%(filename)s[LINE:%(lineno)d]#\n\t %(levelname)-8s [%(asctime)s]  \n\t%(message)s\n|LOG_END|',
                     level=logging.ERROR,
@@ -8,15 +10,26 @@ logging.basicConfig(format=u'\n\n|LOG_START|\n\t%(filename)s[LINE:%(lineno)d]#\n
 logger = logging.getLogger(__name__)
 
 
+class Request:
+    POST = "POST"
+    GET = "GET"
+    PUT = "PUT"
+    DELETE = "DELETE"
+    PATCH = "PATCH"
+
+
 def ExecuteActions(url, reqstType="GET", sending_body=None, authToken=None, headers=None, verify=False):
     response = ''
     default_headers = {'Content-type': 'application/json',  # Определение типа данных
                        'Accept': 'text/plain',
                        'Content-Encoding': 'utf-8'}
+    # result = type(sending_body)
+    # result__dict__ = type(sending_body.__dict__)
+    sending_body = jsons.dump(sending_body.__dict__)
     try:
         if((sending_body is not None and reqstType == "GET") or (reqstType == "POST" and sending_body is not None)):
             response = requests.post(
-                url, json=sending_body, headers=headers, verify=False)
+                url, json=sending_body, headers=default_headers if headers is None else headers, verify=False)
         elif(reqstType == "PUT"):
             response = requests.put(url, json=sending_body, verify=False)
         elif(reqstType == "GET"):
@@ -26,10 +39,7 @@ def ExecuteActions(url, reqstType="GET", sending_body=None, authToken=None, head
         elif(reqstType == "DELETE"):
             response = requests.delete(url, verify=False)
 
-        if (response.status_code == 200):
-            return response.json()
-        else:
-            return response.json()
+        return response
     except OSError as e:
         logger.error(e)
         # logger.error(e, exc_info=True)
@@ -43,8 +53,7 @@ def get_command(text):
     if ("/" in text):
         pattern = r"/\w+"
         command = re.search(pattern, text).group()[1:]
-        if(check_command(command)):
-            return command
+        return command
     return 404
 
 

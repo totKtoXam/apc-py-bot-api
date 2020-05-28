@@ -4,7 +4,7 @@ import json
 # from pydantic import BaseModel
 
 
-class SendlerForm ():
+class SendlerForm:
     BotChannel = "TELEGRAM"
     Text = ""
     Attachments = []

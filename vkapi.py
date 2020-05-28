@@ -3,7 +3,7 @@ import config
 from models.client import StudentClient, TeacherClient, EnrolleeClient, Client
 from validate_email import validate_email
 import functions.operations as opers
-from config import GetUrlBotApiInfo, write_json
+from config import GetUrlApi, write_json
 from enum import Enum
 import six
 import json

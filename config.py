@@ -17,26 +17,18 @@ startLog = "|LOG_START|"
 CSHARP_API_URL = "https://localhost:7001/api/"
 CSHARP_API_BOT_URL = "https://localhost:7001/api/bot/"  # local
 
-DEV_URL = "https://6e79ec90.ngrok.io/"
+DEV_URL = "https://f9a7fbd267e9.ngrok.io/"
 
 LOCAL_COMMANDS = ["/getimg", "/test"]
 
-def GetUrlBotApiInfo(*apiLinks):
-    apiUrl = CSHARP_API_BOT_URL + "actions/"
-    for link in apiLinks:
-        apiUrl += link + "/"
-    return apiUrl
 
-# url = GetUrlApi("asd", "asd")
-# print(url)
+def GetUrlApi(chatId, apiName):
+    return CSHARP_API_URL + apiName + '?channel=TELEGRAM&chatId=' + str(chatId)
 
 
 def GetLogs():
     handle = open("/logging.logs.log", "w")
     CheckCountLogs(handle)
-
-# def LogFileClear(handle):
-#     for line in handle:
 
 
 def CheckCountLogs(handle):
@@ -51,5 +43,5 @@ def write_json(data, fileName="answer.json"):
         try:
             json.dump(data, f, indent=2, ensure_ascii=False)
         except Exception as ex:
-            # json.dump(data, f, indent=2, ensure_ascii=False)
+            json.dump(data.__dict__, f, indent=2, ensure_ascii=False)
             print(ex)

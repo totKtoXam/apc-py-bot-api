@@ -2,15 +2,17 @@ import telebot
 from telebot import types
 from flask import Flask, request
 import config
-from config import GetUrlBotApiInfo, write_json
+from config import GetUrlApi, write_json
 import requests
 import json
 import logging
 import functions.operations as opers
+from functions.operations import Request as operReq
 import platform
 import time
 from models.client import StudentClient, TeacherClient, EnrolleeClient, Client
 from models.sendler import create_sendler_form, GetAttachments, ApplySending
+from models.command import CommandExecForm
 from validate_email import validate_email
 import re
 import jsons
@@ -134,38 +136,49 @@ def MainIndex():
 def onIncommingMessages(message):
     command = opers.get_command(message.text)
     write_json(data=message.chat.__dict__, fileName="telemessage")
-    if (message.text in config.LOCAL_COMMANDS):
-        text = "на тебе фото"
-        imgUrl = "https://sun9-11.userapi.com/c840329/v840329318/cdeb/dHft4lHtLao.jpg"
-        teleBot.send_message(message.chat.id, f'{text}\n{imgUrl}')
-    elif ((command is not None) and command != 404):
+    if ((command is not None) and command != 404):
         client.ChatId = str(message.chat.id)
-        url = GetUrlBotApiInfo(command)
-        response_result = opers.ExecuteActions(url)
-        if (response_result == "REQUEST_ERROR"):
-            server_error(message)
-            send_error_message_to_developer(response_result)
-        else:
-            if ("status_code" in response_result):
-                server_error(message)
-            else:
-                if ("stepCode" in response_result):
-                    write_json(response_result)
-                    if ("actionList" in response_result):
-                        key_board = types.InlineKeyboardMarkup()
-                        for item in response_result['actionList']:
-                            keyAction = types.InlineKeyboardButton(
-                                text=item['name'], callback_data=item['code'])
-                            key_board.add(keyAction)
-                        teleBot.send_message(
-                            message.from_user.id, text=response_result['stepName'], reply_markup=key_board)
-                    else:
-                        teleBot.send_message(
-                            message.from_user.id, text=response_result['stepName'])
-                elif("sectionCode" in response_result):
-                    pass
-                else:
-                    send_error_message_to_developer(response_result)
+        url = GetUrlApi(chatId=message.chat.id,
+                        apiName="command")
+        client.LastName = "LastName"
+        client.FirstName = "FirstName"
+        client.Group = "Group"
+        request_body = CommandExecForm(command, client.__dict__)
+        write_json(request_body, "request_body")
+        response_result = opers.ExecuteActions(
+            url=url, sending_body=request_body)
+        write_json(response_result.json(), "response_result")
+        # get_and_send_msg_text(message, text=response_result)
+        # send_error_message_to_developer(response_result)
+
+    # if ((command is not None) and command != 404):
+    #     client.ChatId = str(message.chat.id)
+    #     url = GetUrlBotApiInfo(command)
+    #     response_result = opers.ExecuteActions(url)
+    #     if (response_result == "REQUEST_ERROR"):
+    #         server_error(message)
+    #         send_error_message_to_developer(response_result)
+    #     else:
+    #         if ("status_code" in response_result):
+    #             server_error(message)
+    #         else:
+    #             if ("stepCode" in response_result):
+    #                 write_json(response_result)
+    #                 if ("actionList" in response_result):
+    #                     key_board = types.InlineKeyboardMarkup()
+    #                     for item in response_result['actionList']:
+    #                         keyAction = types.InlineKeyboardButton(
+    #                             text=item['name'], callback_data=item['code'])
+    #                         key_board.add(keyAction)
+    #                     teleBot.send_message(
+    #                         message.from_user.id, text=response_result['stepName'], reply_markup=key_board)
+    #                 else:
+    #                     teleBot.send_message(
+    #                         message.from_user.id, text=response_result['stepName'])
+    #             elif("sectionCode" in response_result):
+    #                 pass
+    #             else:
+    #                 send_error_message_to_developer(response_result)
     else:
         command_is_unknown(message)
 
