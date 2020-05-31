@@ -2,7 +2,8 @@
   "TELEGRAM": [
     {
       "chatId": 757051459,
-      "command": "start"
+      "command": "help",
+      "inWork": true
     }
   ],
   "V_KONTAKTE": []

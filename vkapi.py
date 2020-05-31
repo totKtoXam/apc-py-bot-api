@@ -1,9 +1,8 @@
 import vk
-import config
+import configapi
 from models.client import StudentClient, TeacherClient, EnrolleeClient, Client
 from validate_email import validate_email
 import functions.operations as opers
-from config import GetUrlApi, write_json
 from enum import Enum
 import six
 import json
@@ -24,14 +23,14 @@ def send_message(user_id, token, message, attachment=""):
     isExecuted = False
     try:
         testNewKeyboard = get_keyboard(buttons=keyboardBtn, one_time=True)
-        write_json(testNewKeyboard, "testNewKeyboard")
-        write_json(testKeyboard, "testKeyboard")
-        # api.messages.send(access_token=config.VK_API_KEY, user_id=str(
+        configapi.write_json(testNewKeyboard, "testNewKeyboard")
+        configapi.write_json(testKeyboard, "testKeyboard")
+        # api.messages.send(access_token=configapi.VK_API_KEY, user_id=str(
         #     user_id), message=message, attachment=attachment, keyboard=json.dumps(testKeyboard, ensure_ascii=False))
-        api.messages.send(access_token=config.VK_API_KEY, user_id=str(
+        api.messages.send(access_token=configapi.VK_API_KEY, user_id=str(
             user_id), message=message, attachment=attachment, keyboard=json.dumps(testNewKeyboard, ensure_ascii=False))
         isExecuted = True
-        write_json(keyboardBtn, "keyboardBtn")
+        configapi.write_json(keyboardBtn, "keyboardBtn")
     except OSError as e:
         logger.error(e)
     finally:
@@ -142,7 +141,7 @@ keyboardBtn.append(get_button("bnt6"))
 
 
 def get_keyboard(buttons=[], one_time=False, inline=False, lineLenght=4):
-    write_json(buttons, "vkkeyboardbuttons")
+    configapi.write_json(buttons, "vkkeyboardbuttons")
     btnLines = []
     inlineIndex = 0
     lineIndex = 0
@@ -155,7 +154,7 @@ def get_keyboard(buttons=[], one_time=False, inline=False, lineLenght=4):
             inlineIndex = 0
             lineIndex += 1
 
-    write_json(btnLines, "btnLine")
+    configapi.write_json(btnLines, "btnLine")
 
     return {
         "one_time": one_time,
@@ -164,7 +163,7 @@ def get_keyboard(buttons=[], one_time=False, inline=False, lineLenght=4):
 
 
 def check_server_key(data):
-    if(data["secret"] == config.SERVER_SECRET_KEY):
+    if(data["secret"] == configapi.SERVER_SECRET_KEY):
         return True
     else:
         return False

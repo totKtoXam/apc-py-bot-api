@@ -23,13 +23,10 @@ def ExecuteActions(url, reqstType="GET", sending_body=None, authToken=None, head
     default_headers = {'Content-type': 'application/json',  # Определение типа данных
                        'Accept': 'text/plain',
                        'Content-Encoding': 'utf-8'}
-    # result = type(sending_body)
-    # result__dict__ = type(sending_body.__dict__)
-    sending_body = jsons.dump(sending_body.__dict__)
     try:
         if((sending_body is not None and reqstType == "GET") or (reqstType == "POST" and sending_body is not None)):
             response = requests.post(
-                url, json=sending_body, headers=default_headers if headers is None else headers, verify=False)
+                url, json=sending_body.__dict__, headers=default_headers if headers is None else headers, verify=False)
         elif(reqstType == "PUT"):
             response = requests.put(url, json=sending_body, verify=False)
         elif(reqstType == "GET"):
@@ -39,12 +36,14 @@ def ExecuteActions(url, reqstType="GET", sending_body=None, authToken=None, head
         elif(reqstType == "DELETE"):
             response = requests.delete(url, verify=False)
 
-        return response
+        if (response.status_code == 200):
+            return response.json()
+        else:
+            return "REQUEST_ERROR\n\n" + str(response.__dict__)
     except OSError as e:
         logger.error(e)
         # logger.error(e, exc_info=True)
-    else:
-        return "REQUEST_ERROR"
+        return "REQUEST_ERROR\n\n" + str(e)
     finally:
         print("Operation finished...")
 
@@ -69,5 +68,3 @@ def check_command(command):
         logger.error(e)
     else:
         return False
-
-# get GetNextStep():

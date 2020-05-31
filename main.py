@@ -1,8 +1,8 @@
 import telebot
 from telebot import types
 from flask import Flask, request
-import config
-from config import GetUrlApi, write_json
+import configapi
+from configapi import RegexPatterns
 import requests
 import json
 import logging
@@ -18,8 +18,13 @@ import re
 import jsons
 import vk
 import vkapi
+from datetime import datetime
 
-global prevSection
+global old_clients_sections
+old_clients_sections = {"TELEGRAM": [], "V_KONTAKTE": []}
+global clients_sections
+clients_sections = {"TELEGRAM": [], "V_KONTAKTE": []}
+
 global client
 client = Client()
 
@@ -45,15 +50,15 @@ app = Flask(__name__)
 
 
 # TELEGRAM BOT PART
-teleBot = telebot.TeleBot(config.TELEGRAM_BOT_TOKEN, threaded=False)
+teleBot = telebot.TeleBot(configapi.TELEGRAM_BOT_TOKEN, threaded=False)
 
 teleBot.remove_webhook()
 time.sleep(1)
 teleBot.set_webhook(
-    url=config.DEV_URL + "api/tele/{}".format(config.TELEGRAM_BOT_TOKEN))
+    url=configapi.DEV_URL + "api/tele/{}".format(configapi.TELEGRAM_BOT_TOKEN))
 
 
-@app.route("/api/tele/{}".format(config.TELEGRAM_BOT_TOKEN), methods=['GET', 'POST'])
+@app.route("/api/tele/{}".format(configapi.TELEGRAM_BOT_TOKEN), methods=['GET', 'POST'])
 def GetIndex():
     if request.method == 'POST':
         teleBot.process_new_updates(
@@ -69,11 +74,11 @@ def vkGetMessages():
     if (vkapi.check_server_key == False):
         return 'secret_key_is_wrong'
     if data['type'] == 'confirmation':
-        return config.SERVER_COMFIRMATION_KEY
+        return configapi.SERVER_COMFIRMATION_KEY
     elif data['type'] == 'message_new':
-        vkapi.create_answer(data['object'], config.VK_API_KEY)
-        write_json(data, fileName="vkmessage")
-        # write_json(data['object'], fileName="vkmessage")
+        vkapi.create_answer(data['object'], configapi.VK_API_KEY)
+        configapi.write_json(data, fileName="vkmessage")
+        # configapi.write_json(data['object'], fileName="vkmessage")
         return 'ok'
 
 
@@ -85,24 +90,24 @@ def vkGetPosts():
     if (vkapi.check_server_key == False):
         return 'secret_key_is_wrong'
     if data['type'] == 'confirmation':
-        return config.SERVER_COMFIRMATION_KEY
+        return configapi.SERVER_COMFIRMATION_KEY
     else:
-        write_json(data['object'], fileName="postFile")
+        configapi.write_json(data['object'], fileName="postFile")
         result = create_sendler_form(data['object'])
         result.Attachments = GetAttachments(data['object'])
-        url = config.CSHARP_API_URL + "sendler/vkpost"
+        url = configapi.CSHARP_API_URL + "sendler/vkpost"
         headers = {'Content-type': 'application/json',  # Определение типа данных
                    'Accept': 'text/plain',
                    'Content-Encoding': 'utf-8'}
         if ((result is not None) and result != 400):
-            write_json(data=result.__dict__, fileName="postresult")
-            # write_json(data=jsons.dump(result.__dict__), fileName="postresult")
+            configapi.write_json(data=result.__dict__, fileName="postresult")
+            # configapi.write_json(data=jsons.dump(result.__dict__), fileName="postresult")
             response = opers.ExecuteActions(
                 url=url, reqstType="POST", sending_body=jsons.dump(result.__dict__), headers=headers)
             if ("status_code" in response):
                 send_error_message_to_developer(response)
             else:
-                write_json(data=response, fileName="responseSendler")
+                configapi.write_json(data=response, fileName="responseSendler")
                 ApplySending(data=response, teleBot=teleBot, vkBot=vkapi.api)
             return 'ok'
             # if (response == "REQUEST_ERROR")
@@ -111,43 +116,93 @@ def vkGetPosts():
     # if 'type' not in data.keys():
     #     return {"status_code": "404", "content": "NOT_VK"}
     # if data['type'] == 'confirmation':
-    #     return config.SERVER_COMFIRMATION_KEY
+    #     return configapi.SERVER_COMFIRMATION_KEY
     # elif data['type'] == 'message_new':
     #     session = vk.Session()
     #     api = vk.API(session, v=5.0)
     #     user_id = data['object']['user_id']
-    #     api.messages.send(access_token=config.VK_API_KEY, user_id=str(user_id), message='Привет, я новый бот!')
+    #     api.messages.send(access_token=configapi.VK_API_KEY, user_id=str(user_id), message='Привет, я новый бот!')
     # return {"status_code": "200", "content": "SUCCESS"}
 
 
 @app.route("/api/sendler", methods=['POST'])
 def Sendler():
     data = json.loads(request.data)
-    write_json(data, fileName="post")
+    configapi.write_json(data, fileName="post")
 
 
 @app.route("/", methods=['GET'])
 def MainIndex():
     linkStyle = "text-align: center; margin: auto; margin-top: 20%; width: 600px; padding: 10px; border: 2px solid red; border-radius: 25px;"
-    return "<div style=\"" + linkStyle + "\"><h1><a href='" + config.TELE_BOT_PROFILE_URL + "'>@" + config.TELE_BOT_NAME + "</a></h1>"
+    return "<div style=\"" + linkStyle + "\"><h1><a href='" + configapi.TELE_BOT_PROFILE_URL + "'>@" + configapi.TELE_BOT_NAME + "</a></h1>"
 
 
 @teleBot.message_handler(content_types=['text'])
 def onIncommingMessages(message):
     command = opers.get_command(message.text)
-    write_json(data=message.chat.__dict__, fileName="telemessage")
-    if ((command is not None) and command != 404):
+    configapi.write_json(data=message.chat.__dict__, fileName="telemessage")
+    if ((command is not None) and command == 404):
+        command_is_unknown(message)
+    elif (command == "stop"):
+        get_and_send_msg_text(message, "Команда уже выполнена")
+    else:
         client.ChatId = str(message.chat.id)
-        url = GetUrlApi(chatId=message.chat.id,
-                        apiName="command")
+        url = configapi.GetUrlApi(chatId=message.chat.id,
+                                  apiName="command", commandName=command)
         client.LastName = "LastName"
         client.FirstName = "FirstName"
         client.Group = "Group"
-        request_body = CommandExecForm(command, client.__dict__)
-        write_json(request_body, "request_body")
-        response_result = opers.ExecuteActions(
-            url=url, sending_body=request_body)
-        write_json(response_result.json(), "response_result")
+        # request_body = CommandExecForm(command, client.__dict__)
+        # configapi.write_json(request_body, "request_body")
+        response_result = opers.ExecuteActions(url=url)
+        if ("REQUEST_ERROR" in response_result):
+            send_error_message_to_developer(str(response_result))
+            get_and_send_msg_text(
+                message, text="Произошла ошибка сервера. Разработчики уже осведомлены.\nПросим прощения за доставленные нами неудобства")
+        elif ("isError" in response_result):
+            if (response_result['isError'] == False):
+                # clients_sections["TELEGRAM"] = {"chatId": message.chat.id}
+                old_clients_sections["TELEGRAM"] = clients_sections["TELEGRAM"]
+                configapi.create_or_update_current_command_item(
+                    message.chat.id, command, clients_sections, "TELEGRAM")
+                configapi.write_json(clients_sections, "clients_sections")
+                configapi.write_json(old_clients_sections,
+                                     "old_clients_sections")
+                if ("data" in response_result and response_result["data"]):
+                    if ("actionList" in response_result["data"]):
+                        # GET_ACTIONS_FROM_RESPONE_IF_IS_EXISTS
+                        key_board = types.InlineKeyboardMarkup()
+                        for item in response_result["data"]['actionList']:
+                            keyAction = types.InlineKeyboardButton(
+                                text=item['name'], callback_data=item['code'])
+                            key_board.add(keyAction)
+                        configapi.write_json(
+                            response_result["data"]["actionList"], "response_action_list")
+                        get_and_send_msg_text(
+                            message, text=response_result["data"]["message"], keyboard=key_board)
+                        # GET_ACTIONS_FROM_RESPONE_IF_IS_EXISTS_END
+                    else:
+                        get_and_send_msg_text(message, text="success")
+                elif ("message" in response_result):
+                    get_and_send_msg_text(message, response_result["message"])
+                else:
+                    get_and_send_msg_text(
+                        message, text="Ошибка со стороны сервера. Просим прощения за предоставленные нами неудобства")
+                    send_error_message_to_developer("UNKNOWN_ERROR")
+            else:
+                send_error_message_to_developer(
+                    "CRITICAL_ERROR_ON_C#!!! CRITICAL_ERROR_ON_C#!!! CRITICAL_ERROR_ON_C#!!!\n\n\n" +
+                    "CODE: " + str(response_result["code"]) +
+                    "\n\nNAME_CODE: " + response_result["nameCode"] +
+                    "\n\nTITLE: " + response_result["title"] +
+                    "\n\nMESSAGE: " + response_result["message"])
+                get_and_send_msg_text(
+                    message, response_result["title"] + "\n\n" + response_result["message"])
+            configapi.write_json(response_result, "response_result")
+        else:
+            send_error_message_to_developer(response_result)
+            get_and_send_msg_text(
+                message, text="Произошла ошибка сервера. Разработчики уже осведомлены.\nПросим прощения за доставленные нами неудобства")
         # get_and_send_msg_text(message, text=response_result)
         # send_error_message_to_developer(response_result)
 
@@ -163,7 +218,7 @@ def onIncommingMessages(message):
     #             server_error(message)
     #         else:
     #             if ("stepCode" in response_result):
-    #                 write_json(response_result)
+    #                 configapi.write_json(response_result)
     #                 if ("actionList" in response_result):
     #                     key_board = types.InlineKeyboardMarkup()
     #                     for item in response_result['actionList']:
@@ -179,8 +234,6 @@ def onIncommingMessages(message):
     #                 pass
     #             else:
     #                 send_error_message_to_developer(response_result)
-    else:
-        command_is_unknown(message)
 
     # if message.text == "/start":
     #     # url = urlBotApi + message.text.replace('/', '')
@@ -232,20 +285,39 @@ def client_reg(message):
 
 
 def get_last_name(message):
-    client.LastName = get_and_send_msg_text(
-        message, "Введите имя*:", 1, get_first_name)
+    if(not RegexPatterns.is_letters(message.text)):
+        get_and_send_msg_text(
+            message, "Данные введеные некорретно.\nВведите фамилию*:", 1, get_last_name)
+    else:
+        client.LastName = get_and_send_msg_text(
+            message, "Введите имя*:", 1, get_first_name)
 
 
 def get_first_name(message):
-    client.FirstName = get_and_send_msg_text(
-        message, "Введите отчество:", 1, get_middle_name)
+    if(not RegexPatterns.is_letters(message.text)):
+        get_and_send_msg_text(
+            message, "Данные введеные некорретно.\nВведите имя*:", 1, get_first_name)
+    else:
+        client.FirstName = get_and_send_msg_text(
+            message, "Введите отчество:", 1, get_middle_name)
 
 
 def get_middle_name(message):
-    mdlName = get_and_send_msg_text(
-        message, "Введите эл. адрес*:", 1, get_email)
-    if (mdlName != "-"):
-        client.MiddleName = mdlName
+    if (message.text != "-"):
+        if(not RegexPatterns.is_letters(message.text)):
+            get_and_send_msg_text(
+                message, "Данные введеные некорретно.\nВведите отчество*:", 1, get_middle_name)
+        else:
+            client.MiddleName = get_and_send_msg_text(
+                message, "Введите эл. адрес*:", 1, get_email)
+    else:
+        get_and_send_msg_text(
+            message, "Введите эл. адрес*:", 1, get_email)
+    # if (mdlName != "-"):
+    #     if(RegexPatterns.is_letters(mdlName)):
+    #         get_middle_name(message)
+    #     else:
+    #         client.MiddleName = mdlName
 
 
 def get_email(message):
@@ -302,7 +374,7 @@ def create_post_client_from_tele(message):
     headers = {'Content-type': 'application/json',  # Определение типа данных
                'Accept': 'text/plain',
                'Content-Encoding': 'utf-8'}
-    response_result = opers.ExecuteActions(url=config.CSHARP_API_BOT_URL +
+    response_result = opers.ExecuteActions(url=configapi.CSHARP_API_BOT_URL +
                                            "createClient", reqstType='POST', headers=headers, sending_body=data)
     if (response_result == "REQUEST_ERROR"):
         server_error(message)
@@ -318,27 +390,53 @@ def create_post_client_from_tele(message):
                 "Ожидайте активации учётной записи администратором." if "TEACHER" in client.RoleCode else "")
 
 
-def get_and_send_msg_text(message, text="Бот сломался ;D", type_s=0, func=None):
-    if ("/" in message.text):
-        if (opers.check_command(opers.get_command(message.text))):
-            pass
-        elif (check_local_command(opers.get_command(message.text))):
-            if (message.text == "/stop"):
-                teleBot.send_message(
-                    message.chat.id, "Регистрация прервана. Чтобы начать регистрацию повторно введите /start")
-                return
+def get_and_send_msg_text(message, text=None, type_s=0, func=None, keyboard=None):
+    # "Неизвестная ошибка. Просим прощения за предоставленные нами неудобства"
+    # type_s = 0 - отправка сообщения
+    # type_s = 1 - отправка сообщения с последующим вызовом функции
+    # type_s = 2 - отправка сообщения и параллельный вызов функции
+    print("\nMESSAGE_OPERATIONS_STARTED...")
+    print("CHECK_MESSAGE...")
+    if (text is not None):
+        command = opers.get_command(message.text)
+        if (command != 404):
+            if (configapi.check_command_in_work(clients_sections["TELEGRAM"], message.chat.id)):
+                if (command == "stop"):
+                    teleBot.send_message(message.chat.id, "Действие прервано")
+                    found_command = configapi.get_command_by_chat_id(
+                        clients_sections["TELEGRAM"], message.chat.id)
+                    if (found_command is not None):
+                        if (found_command == "start"):
+                            teleBot.send_message(
+                                message.chat.id, "Чтобы начать регистрацию повторно введите /start")
+                    configapi.create_or_update_current_command_item(
+                        message.chat.id, command, clients_sections, "TELEGRAM", False)
+                    return
 
-    teleBot.send_message(message.chat.id, text)
-    if type_s == 1:
-        if(func is not None):
-            teleBot.register_next_step_handler(message, func)
-    if (type_s == 2):
-        func(message)
+        print("\n")
+        try:
+            if type_s == 1:
+                if(func is not None):
+                    teleBot.register_next_step_handler(message, func)
+            if (type_s == 2):
+                func(message)
+            if (keyboard is None):
+                teleBot.send_message(message.chat.id, text)
+            else:
+                teleBot.send_message(message.from_user.id,
+                                     text=text, reply_markup=keyboard)
+        except OSError as e:
+            send_error_message_to_developer(str(e))
+            teleBot.send_message(
+                message.chat.id, "Неизвестная ошибка. Просим прощения за предоставленные нами неудобства")
+        finally:
+            print("SENDING_MESSAGE_FINISHED!\n")
     return message.text
 
 
 def send_error_message_to_developer(error_msg):
-    teleBot.send_message(config.DEV_CHAT_ID, text=error_msg)
+    teleBot.send_message(configapi.DEV_CHAT_ID, text=str(
+        datetime.now()) + "\n\n" + error_msg)
 
 
 def command_is_unknown(message):
