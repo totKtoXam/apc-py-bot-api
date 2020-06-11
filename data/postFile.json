@@ -1,0 +1,37 @@
+{
+  "id": 64,
+  "from_id": -193771849,
+  "owner_id": -193771849,
+  "date": 1591527487,
+  "marked_as_ads": 0,
+  "post_type": "post",
+  "text": "Действия \n#замены #П-16-39б",
+  "can_edit": 1,
+  "created_by": 212198244,
+  "can_delete": 1,
+  "attachments": [
+    {
+      "type": "photo",
+      "photo": {
+        "album_id": -7,
+        "date": 1591527487,
+        "id": 457239090,
+        "owner_id": -193771849,
+        "has_tags": false,
+        "access_key": "a6251439df81a5198a",
+        "height": 727,
+        "photo_130": "https://sun9-50.userapi.com/c858336/v858336927/f39dd/IKo2332-b2Q.jpg",
+        "photo_604": "https://sun9-72.userapi.com/c858336/v858336927/f39de/xK3JSQzzE4g.jpg",
+        "photo_75": "https://sun9-60.userapi.com/c858336/v858336927/f39dc/WF1wJo7LaRQ.jpg",
+        "photo_807": "https://sun9-52.userapi.com/c858336/v858336927/f39df/9Wq_I97-jcg.jpg",
+        "post_id": 64,
+        "text": "",
+        "user_id": 100,
+        "width": 728
+      }
+    }
+  ],
+  "comments": {
+    "count": 0
+  }
+}

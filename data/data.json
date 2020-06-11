@@ -1,0 +1,14 @@
+{
+  "description": "вывод всех комманд и возможностей",
+  "message": "/help - вывод всех комманд и возможностей\n/start - процесс регистрации\n/specs - список всех специальностей\n/sendAppeal - предварительная подача заявки на поступление\n",
+  "typeId": "55840006-38d7-45b9-b0aa-0c46e91ab192",
+  "typeCode": "INFORMATION",
+  "typeCondition": "information",
+  "typeDesc": "шаг является информативным, не выполняющий какого-либо изменения в данных",
+  "actionList": [],
+  "data": null,
+  "id": "73f0f023-0249-4182-971c-6a180e9351cb",
+  "name": "помощь",
+  "code": "help",
+  "condition": "help"
+}

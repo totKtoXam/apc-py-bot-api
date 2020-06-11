@@ -78,7 +78,6 @@ def vkGetMessages():
     elif data['type'] == 'message_new':
         vkapi.create_answer(data['object'], configapi.VK_API_KEY)
         configapi.write_json(data, fileName="vkmessage")
-        # configapi.write_json(data['object'], fileName="vkmessage")
         return 'ok'
 
 
@@ -96,33 +95,21 @@ def vkGetPosts():
         result = create_sendler_form(data['object'])
         result.Attachments = GetAttachments(data['object'])
         url = configapi.CSHARP_API_URL + "sendler/vkpost"
-        headers = {'Content-type': 'application/json',  # Определение типа данных
+        headers = {'Content-type': 'application/json',
                    'Accept': 'text/plain',
                    'Content-Encoding': 'utf-8'}
         if ((result is not None) and result != 400):
             configapi.write_json(data=result.__dict__, fileName="postresult")
-            # configapi.write_json(data=jsons.dump(result.__dict__), fileName="postresult")
             response = opers.ExecuteActions(
-                url=url, reqstType="POST", sending_body=jsons.dump(result.__dict__), headers=headers)
-            if ("status_code" in response):
+                url=url, reqstType="POST", sending_body=result, headers=headers)
+            if ("REQUEST_ERROR" in response or "status_code" in response):
                 send_error_message_to_developer(response)
             else:
                 configapi.write_json(data=response, fileName="responseSendler")
-                ApplySending(data=response, teleBot=teleBot, vkBot=vkapi.api)
+                ApplySending(data=response["data"],
+                             teleBot=teleBot, vkBot=vkapi.api)
             return 'ok'
-            # if (response == "REQUEST_ERROR")
     return 'ok'
-    # data = json.loads(request.data)
-    # if 'type' not in data.keys():
-    #     return {"status_code": "404", "content": "NOT_VK"}
-    # if data['type'] == 'confirmation':
-    #     return configapi.SERVER_COMFIRMATION_KEY
-    # elif data['type'] == 'message_new':
-    #     session = vk.Session()
-    #     api = vk.API(session, v=5.0)
-    #     user_id = data['object']['user_id']
-    #     api.messages.send(access_token=configapi.VK_API_KEY, user_id=str(user_id), message='Привет, я новый бот!')
-    # return {"status_code": "200", "content": "SUCCESS"}
 
 
 @app.route("/api/sendler", methods=['POST'])
@@ -139,21 +126,32 @@ def MainIndex():
 
 @teleBot.message_handler(content_types=['text'])
 def onIncommingMessages(message):
-    command = opers.get_command(message.text)
+    command = message.text
+    if ("/" in command):
+        command = opers.get_command(message.text)
     configapi.write_json(data=message.chat.__dict__, fileName="telemessage")
     if ((command is not None) and command == 404):
         command_is_unknown(message)
     elif (command == "stop"):
-        get_and_send_msg_text(message, "Команда уже выполнена")
+        if (not configapi.check_command_in_work(clients_sections["TELEGRAM"], message.chat.id)):
+            get_and_send_msg_text(message, "Команда уже выполнена", type_s=5)
+        else:
+            configapi.create_or_update_current_command_item(
+                message.chat.id, clients_sections, "TELEGRAM", inWork=False)
+            get_and_send_msg_text(message, "Команда приостановлена. Чтобы повторить действие напишите /" +
+                                  configapi.get_command_by_chat_id(clients_sections["TELEGRAM"], message.chat.id), type_s=5)
     else:
+        if(configapi.check_command_in_work(clients_sections["TELEGRAM"], message.chat.id, command)):
+            get_and_send_msg_text(
+                message, "Команда уже в процессе выполнения. Пожалуйста, завершите процесс выполнения действия команды /" + configapi.get_command_by_chat_id(clients_sections["TELEGRAM"], message.chat.id) +" или выполните это принудительно командой /stop")
+            return "ok"
         client.ChatId = str(message.chat.id)
-        url = configapi.GetUrlApi(chatId=message.chat.id,
-                                  apiName="command", commandName=command)
-        client.LastName = "LastName"
-        client.FirstName = "FirstName"
-        client.Group = "Group"
-        # request_body = CommandExecForm(command, client.__dict__)
-        # configapi.write_json(request_body, "request_body")
+        url = ""
+        if ("#" in command):
+            url = configapi.CSHARP_API_URL + "Info/spec/" + command[1:]
+        else:
+            url = configapi.GetUrlApi(chatId=message.chat.id,
+                                      apiName="command", commandName=command)
         response_result = opers.ExecuteActions(url=url)
         if ("REQUEST_ERROR" in response_result):
             send_error_message_to_developer(str(response_result))
@@ -161,30 +159,46 @@ def onIncommingMessages(message):
                 message, text="Произошла ошибка сервера. Разработчики уже осведомлены.\nПросим прощения за доставленные нами неудобства")
         elif ("isError" in response_result):
             if (response_result['isError'] == False):
-                # clients_sections["TELEGRAM"] = {"chatId": message.chat.id}
-                old_clients_sections["TELEGRAM"] = clients_sections["TELEGRAM"]
-                configapi.create_or_update_current_command_item(
-                    message.chat.id, command, clients_sections, "TELEGRAM")
-                configapi.write_json(clients_sections, "clients_sections")
-                configapi.write_json(old_clients_sections,
-                                     "old_clients_sections")
-                if ("data" in response_result and response_result["data"]):
-                    if ("actionList" in response_result["data"]):
-                        # GET_ACTIONS_FROM_RESPONE_IF_IS_EXISTS
-                        key_board = types.InlineKeyboardMarkup()
-                        for item in response_result["data"]['actionList']:
-                            keyAction = types.InlineKeyboardButton(
-                                text=item['name'], callback_data=item['code'])
-                            key_board.add(keyAction)
-                        configapi.write_json(
-                            response_result["data"]["actionList"], "response_action_list")
+                if (response_result["data"] is not None):
+                    data = response_result["data"]
+                    old_clients_sections["TELEGRAM"] = clients_sections["TELEGRAM"]
+
+                    if ("typeCode" in data):
+                        if (data["typeCode"] == "INFORMATION"):
+                            configapi.create_or_update_current_command_item(
+                                message.chat.id, clients_sections, "TELEGRAM", command, False)
+                        else:
+                            configapi.create_or_update_current_command_item(
+                                message.chat.id, clients_sections, "TELEGRAM", command)
+
+                    configapi.write_json(clients_sections, "clients_sections")
+                    configapi.write_json(old_clients_sections,
+                                         "old_clients_sections")
+
+                    if ("data" in response_result and response_result["data"]):
+                        configapi.write_json(response_result["data"], "data")
+                        if ("actionList" in response_result["data"] and response_result["data"]["actionList"] is not None):
+                            # GET_ACTIONS_FROM_RESPONE_IF_IS_EXISTS
+                            key_board = types.InlineKeyboardMarkup()
+                            for item in data['actionList']:
+                                keyAction = types.InlineKeyboardButton(
+                                    text=item['name'], callback_data=item['code'])
+                                key_board.add(keyAction)
+                            configapi.write_json(
+                                data["actionList"], "response_action_list")
+                            get_and_send_msg_text(
+                                message, text=data["message"], keyboard=key_board)
+                            # GET_ACTIONS_FROM_RESPONE_IF_IS_EXISTS_END
+                        else:
+                            get_and_send_msg_text(
+                                message, text=data["message"])
+                    elif ("message" in response_result):
                         get_and_send_msg_text(
-                            message, text=response_result["data"]["message"], keyboard=key_board)
-                        # GET_ACTIONS_FROM_RESPONE_IF_IS_EXISTS_END
+                            message, response_result["message"])
                     else:
-                        get_and_send_msg_text(message, text="success")
-                elif ("message" in response_result):
-                    get_and_send_msg_text(message, response_result["message"])
+                        get_and_send_msg_text(
+                            message, text="Ошибка со стороны сервера. Просим прощения за предоставленные нами неудобства")
+                        send_error_message_to_developer("UNKNOWN_ERROR")
                 else:
                     get_and_send_msg_text(
                         message, text="Ошибка со стороны сервера. Просим прощения за предоставленные нами неудобства")
@@ -198,13 +212,10 @@ def onIncommingMessages(message):
                     "\n\nMESSAGE: " + response_result["message"])
                 get_and_send_msg_text(
                     message, response_result["title"] + "\n\n" + response_result["message"])
-            configapi.write_json(response_result, "response_result")
         else:
             send_error_message_to_developer(response_result)
             get_and_send_msg_text(
                 message, text="Произошла ошибка сервера. Разработчики уже осведомлены.\nПросим прощения за доставленные нами неудобства")
-        # get_and_send_msg_text(message, text=response_result)
-        # send_error_message_to_developer(response_result)
 
     # if ((command is not None) and command != 404):
     #     client.ChatId = str(message.chat.id)
@@ -269,8 +280,11 @@ def callback_worker(call):
         client.RoleCode = call.data
         roleName = "студент" if ("STUDENT" in call.data) else "преподаватель" if (
             "TEACHER" in call.data) else "абитуриент"
-        teleBot.edit_message_text(chat_id=call.message.chat.id,
-                                  message_id=call.message.message_id, text="Вы уже выбрали роль: " + roleName)
+        try:
+            teleBot.edit_message_text(chat_id=call.message.chat.id,
+                                      message_id=call.message.message_id, text="Вы уже выбрали роль: " + roleName)
+        except OSError as e:
+            logger.error(e)
         teleBot.send_message(chat_id=call.message.chat.id,
                              text=" Если запрашиваемые данные являются не обязательными и Вы не хотите или по какой-либо причине не желаете давать их, то введите \"-\". Обязательные данные будут отмечены *")
         teleBot.send_message(chat_id=call.message.chat.id,
@@ -337,10 +351,9 @@ def get_phone(message):
     elif (client.RoleCode == "ROLE_IS_TEACHER"):
         phone = phone = get_and_send_msg_text(
             message, "Введите Ваш ИИН (Необходим для уникальности записи)*:", 1, get_teacher_iin)
-        pass
-    else:
+    elif (client.RoleCode == "ROLE_IS_ENROLLEE"):
         phone = get_and_send_msg_text(
-            message, "Отлично! Ожидайте ответа. Введите /help, чтобы получить больше информации.", 2, create_post_client_from_tele)
+            message, "Отлично! Ожидайте ответа...", 2, create_post_client_from_tele)
     if (phone != "-"):
         client.Phone = phone
 
@@ -348,10 +361,9 @@ def get_phone(message):
 # teacher
 def get_teacher_iin(message):
     # client.TeacherIIN
-    iin = get_and_send_msg_text(
-        message, "Введите группу, которую Вы курируете:", 1, get_group)
-    if (re.search(r'\d{12}', iin)):
-        client.TeacherIIN = iin
+    if (re.search(r'\d{12}', message.text)):
+        client.TeacherIIN = get_and_send_msg_text(
+            message, "Введите группу, которую Вы курируете:", 1, get_group)
     else:
         get_and_send_msg_text(
             message, "ИИН был введён некорректно. Введите ИИН повторно*:", 1, get_teacher_iin)
@@ -364,18 +376,23 @@ def get_ticket_number(message):
 
 
 def get_group(message):
-    client.Group = get_and_send_msg_text(
-        message, "Отлично! Ожидайте ответа. Введите /help, чтобы получить больше информации.", 2, create_post_client_from_tele)
+    if (message.text != '-' or message.text.__len__() < 4):
+        client.Group = message.text
+        get_and_send_msg_text(
+            message, "Отлично! Ожидайте ответа...", 2, create_post_client_from_tele)
+    else:
+        get_and_send_msg_text(
+            message, "Данные о группе введены не верно. Введите группу повторно: ", 2, create_post_client_from_tele)
 
 
 def create_post_client_from_tele(message):
-    client.BotChannel = "TELEGRAM"
-    data = jsons.dump(client.__dict__)
-    headers = {'Content-type': 'application/json',  # Определение типа данных
+    headers = {'Content-type': 'application/json',
                'Accept': 'text/plain',
                'Content-Encoding': 'utf-8'}
-    response_result = opers.ExecuteActions(url=configapi.CSHARP_API_BOT_URL +
-                                           "createClient", reqstType='POST', headers=headers, sending_body=data)
+    response_result = opers.ExecuteActions(
+        url=configapi.CSHARP_API_BOT_URL + "createClient" +
+        "?channel=TELEGRAM&chatId=" + str(message.chat.id),
+        reqstType='POST', headers=headers, sending_body=client)
     if (response_result == "REQUEST_ERROR"):
         server_error(message)
         send_error_message_to_developer(response_result)
@@ -383,11 +400,13 @@ def create_post_client_from_tele(message):
         if ("status_code" in response_result):
             server_error(message)
         else:
-            client.ClientBotId = response_result['clientBotId']
             get_and_send_msg_text(
                 message,
                 "Регистрация прошла успешно! Подтвердите эл. почту, чтобы получать необходимую информацию и рассылку. Введите /help, чтобы получить больше инфорации." +
-                "Ожидайте активации учётной записи администратором." if "TEACHER" in client.RoleCode else "")
+                ("Ожидайте активации учётной записи администратором." if "TEACHER" in client.RoleCode else ""))
+    configapi.create_or_update_current_command_item(
+        message.chat.id, clients_sections, "TELEGRAM", "start", False)
+    return response_result
 
 
 def get_and_send_msg_text(message, text=None, type_s=0, func=None, keyboard=None):
@@ -395,42 +414,80 @@ def get_and_send_msg_text(message, text=None, type_s=0, func=None, keyboard=None
     # type_s = 0 - отправка сообщения
     # type_s = 1 - отправка сообщения с последующим вызовом функции
     # type_s = 2 - отправка сообщения и параллельный вызов функции
+    # type_s = 3 - отправка сообщения и клавиатуры
+    # type_s = 4 - отправка сообщения и клавиатуры, выполнение функции
+    # type_s = 5 - отправка сообщения без проверки команды
+    if (type_s != 5):
+        if (func is None and keyboard is None):
+            type_s = 0
+        if (text is not None and func is not None and keyboard is None and type_s != 2):
+            type_s = 1
+        if (text is not None and func is not None and keyboard is None and type_s != 1):
+            type_s = 2
+        if (keyboard is not None and func is None):
+            type_s = 3
+        if (keyboard is not None and func is not None and text is not None):
+            type_s = 4
+
     print("\nMESSAGE_OPERATIONS_STARTED...")
     print("CHECK_MESSAGE...")
-    if (text is not None):
-        command = opers.get_command(message.text)
-        if (command != 404):
-            if (configapi.check_command_in_work(clients_sections["TELEGRAM"], message.chat.id)):
-                if (command == "stop"):
-                    teleBot.send_message(message.chat.id, "Действие прервано")
-                    found_command = configapi.get_command_by_chat_id(
-                        clients_sections["TELEGRAM"], message.chat.id)
-                    if (found_command is not None):
-                        if (found_command == "start"):
-                            teleBot.send_message(
-                                message.chat.id, "Чтобы начать регистрацию повторно введите /start")
-                    configapi.create_or_update_current_command_item(
-                        message.chat.id, command, clients_sections, "TELEGRAM", False)
-                    return
+    isProcessStopped = False
+    if (type_s != 5):
+        if (text is not None):
+            command = opers.get_command(message.text)
+            if (command != 404):
+                if (configapi.check_command_in_work(clients_sections["TELEGRAM"], message.chat.id)):
+                    if (command == "stop"):
+                        teleBot.send_message(
+                            message.chat.id, "Действие прервано")
+                        isProcessStopped = True
+                        found_command = configapi.get_command_by_chat_id(
+                            clients_sections["TELEGRAM"], message.chat.id)
+                        if (found_command is not None):
+                            if (found_command == "start"):
+                                teleBot.send_message(
+                                    message.chat.id, "Чтобы начать регистрацию повторно введите /start")
+                        configapi.create_or_update_current_command_item(
+                            message.chat.id, clients_sections, "TELEGRAM", command, False)
+                        return
+                # else:
+                #     teleBot.send_message(
+                #         message.chat.id, "Вы уже в процессе выполнения команды. Чтобы остановить процесс необходимо написать /stop")
 
-        print("\n")
-        try:
-            if type_s == 1:
-                if(func is not None):
-                    teleBot.register_next_step_handler(message, func)
-            if (type_s == 2):
-                func(message)
-            if (keyboard is None):
+    print("\n")
+    try:
+        if (not isProcessStopped):
+            if (type_s == 0 or type_s == 5):
                 teleBot.send_message(message.chat.id, text)
-            else:
+            elif type_s == 1:
+                if(func is not None):
+                    teleBot.register_next_step_handler(
+                        message, func)
+                    teleBot.send_message(message.chat.id, text)
+                else:
+                    server_error(message)
+            elif (type_s == 2):
+                response = func(message)
+                if("REQUEST_ERROR" in response):
+                    send_error_message_to_developer(response[:250:])
+                else:
+                    teleBot.send_message(message.chat.id, text)
+
+            elif (type_s == 3):
                 teleBot.send_message(message.from_user.id,
                                      text=text, reply_markup=keyboard)
-        except OSError as e:
-            send_error_message_to_developer(str(e))
-            teleBot.send_message(
-                message.chat.id, "Неизвестная ошибка. Просим прощения за предоставленные нами неудобства")
-        finally:
-            print("SENDING_MESSAGE_FINISHED!\n")
+            elif (type_s == 4):
+                func(message)
+                teleBot.send_message(message.from_user.id,
+                                     text=text, reply_markup=keyboard)
+            else:
+                server_error(message)
+    except OSError as e:
+        send_error_message_to_developer(str(e))
+        teleBot.send_message(
+            message.chat.id, "Неизвестная ошибка. Просим прощения за предоставленные нами неудобства")
+    finally:
+        print("SENDING_MESSAGE_FINISHED!\n")
     return message.text
 
 
@@ -455,9 +512,3 @@ def check_local_command(command):
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000, debug=True)
-# try:
-#     teleBot.polling(timeout=30)
-# except:
-#     time.sleep(15)
-#     teleBot.polling(timeout=30)
-    # teleBot.polling(none_stop=True)

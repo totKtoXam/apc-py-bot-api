@@ -1,0 +1,33 @@
+{
+  "code": 200,
+  "nameCode": "SUCCESS",
+  "title": "",
+  "message": "",
+  "isError": false,
+  "data": {
+    "text": "Действия \n#замены #П-16-39б",
+    "studentList": [
+      {
+        "clientId": 12,
+        "userId": "c587457f-556c-4a64-90d8-e8291f545628",
+        "group": "п-16-39б",
+        "email": "kham.b.13.09@gmail.com",
+        "teleChatId": "757051459",
+        "vkChatId": null,
+        "whatsAppChatId": null
+      }
+    ],
+    "sendingFileList": [
+      {
+        "type": "photo",
+        "id": 457239090,
+        "ownerId": "a6251439df81a5198a",
+        "url": "https://sun9-52.userapi.com/c858336/v858336927/f39df/9Wq_I97-jcg.jpg",
+        "title": null,
+        "text": "",
+        "ext": null,
+        "accessKey": null
+      }
+    ]
+  }
+}

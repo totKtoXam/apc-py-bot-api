@@ -2,9 +2,7 @@ class Client:
     Email = ""
     Phone = ""
     ClientBotId = 0
-    ChatId = 0
     RoleCode = ""
-    BotChannel = "telegram"
     LastName = ""
     FirstName = ""
     MiddleName = ""

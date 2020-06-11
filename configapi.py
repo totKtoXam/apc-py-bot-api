@@ -8,7 +8,7 @@ TELE_BOT_NAME = "AstanaPolytechCollegeBot"
 TELE_BOT_PROFILE_URL = "https://t.me/AstanaPolytechCollegeBot"
 
 VK_API_KEY = "eee2e56af72e125b7511d765e3920fb247a002787383b55bbdd893e886526999e189ae920e8ecc441a03b"
-SERVER_COMFIRMATION_KEY = "f7ca0d6a"
+SERVER_COMFIRMATION_KEY = "8aeaa9c1"
 SERVER_SECRET_KEY = "FF4DDB22A5AD7A7853E74B2FDB524"
 
 DEV_CHAT_ID = 757051459
@@ -19,7 +19,7 @@ startLog = "|LOG_START|"
 CSHARP_API_URL = "https://localhost:7001/api/"
 CSHARP_API_BOT_URL = "https://localhost:7001/api/bot/"  # local
 
-DEV_URL = "https://6b110979a846.ngrok.io/"
+DEV_URL = "https://747df95f7c5d.ngrok.io/"
 
 LOCAL_COMMANDS = ["/getimg", "/test"]
 
@@ -49,12 +49,13 @@ def write_json(data, fileName="answer.json"):
             print(ex)
 
 
-def create_or_update_current_command_item(chatId, command, item_list, channel, inWork=True):
+def create_or_update_current_command_item(chatId, item_list, channel, command=None, inWork=True):
     if (channel is not None and item_list is not None):
         index = findIndexByChatId(item_list, chatId, channel)
         if (index is not None):
-            item_list[channel][index]["command"] = command
-            item_list[channel][index]["inWork"] = True
+            if (command is not None):
+                item_list[channel][index]["command"] = command
+            item_list[channel][index]["inWork"] = inWork
         else:
             new_item = {
                 "chatId": chatId,
@@ -78,6 +79,13 @@ def findIndexByChatId(item_list, chatId, channel=None):
     return None
 
 
+def get_command_msg_id(item_list, chatId):
+    for item in item_list:
+        if (item["chatId"] == chatId):
+            return item["startedMsgId"]
+    return None
+
+
 def get_command_by_chat_id(item_list, chatId):
     for item in item_list:
         if(item["chatId"] == chatId):
@@ -85,10 +93,15 @@ def get_command_by_chat_id(item_list, chatId):
     return None
 
 
-def check_command_in_work(item_list, chatId):
+def check_command_in_work(item_list, chatId, command=None):
     for item in item_list:
-        if(item["chatId"] == chatId):
-            return item["inWork"]
+        if (command is None):
+            if(item["chatId"] == chatId):
+                return item["inWork"]
+        else:
+            if (item["command"] == command and item["chatId"] == chatId):
+                return item["inWork"]
+    return False
 
 
 class RegexPatterns:
