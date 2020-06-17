@@ -1,5 +1,8 @@
 import telebot
 from telebot import types
+import telebot_calendar
+from telebot_calendar import CallbackData
+from telebot.types import ReplyKeyboardRemove, CallbackQuery
 from flask import Flask, request
 import configapi
 from configapi import RegexPatterns
@@ -11,14 +14,15 @@ from functions.operations import Request as operReq
 import platform
 import time
 from models.client import StudentClient, TeacherClient, EnrolleeClient, Client
-from models.sendler import create_sendler_form, GetAttachments, ApplySending
+from models.sendler import create_sendler_form, GetAttachments, ApplySending, ApplyTaskSending
 from models.command import CommandExecForm
+from models.assignedTask import AssignedTask
 from validate_email import validate_email
 import re
 import jsons
 import vk
 import vkapi
-from datetime import datetime
+from datetime import datetime, timedelta
 
 global old_clients_sections
 old_clients_sections = {"TELEGRAM": [], "V_KONTAKTE": []}
@@ -27,6 +31,9 @@ clients_sections = {"TELEGRAM": [], "V_KONTAKTE": []}
 
 global client
 client = Client()
+
+global new_assigned_task
+new_assigned_task = AssignedTask()
 
 # LOGGING PART
 logging.basicConfig(format=u'\n\n|LOG_START|\n\t%(filename)s[LINE:%(lineno)d]#\n\t %(levelname)-8s [%(asctime)s]  \n\t%(message)s\n|LOG_END|',
@@ -77,7 +84,6 @@ def vkGetMessages():
         return configapi.SERVER_COMFIRMATION_KEY
     elif data['type'] == 'message_new':
         vkapi.create_answer(data['object'], configapi.VK_API_KEY)
-        configapi.write_json(data, fileName="vkmessage")
         return 'ok'
 
 
@@ -91,7 +97,6 @@ def vkGetPosts():
     if data['type'] == 'confirmation':
         return configapi.SERVER_COMFIRMATION_KEY
     else:
-        configapi.write_json(data['object'], fileName="postFile")
         result = create_sendler_form(data['object'])
         result.Attachments = GetAttachments(data['object'])
         url = configapi.CSHARP_API_URL + "sendler/vkpost"
@@ -99,13 +104,11 @@ def vkGetPosts():
                    'Accept': 'text/plain',
                    'Content-Encoding': 'utf-8'}
         if ((result is not None) and result != 400):
-            configapi.write_json(data=result.__dict__, fileName="postresult")
             response = opers.ExecuteActions(
                 url=url, reqstType="POST", sending_body=result, headers=headers)
             if ("REQUEST_ERROR" in response or "status_code" in response):
                 send_error_message_to_developer(response)
             else:
-                configapi.write_json(data=response, fileName="responseSendler")
                 ApplySending(data=response["data"],
                              teleBot=teleBot, vkBot=vkapi.api)
             return 'ok'
@@ -114,8 +117,8 @@ def vkGetPosts():
 
 @app.route("/api/sendler", methods=['POST'])
 def Sendler():
-    data = json.loads(request.data)
-    configapi.write_json(data, fileName="post")
+    pass
+    # data = json.loads(request.data)
 
 
 @app.route("/", methods=['GET'])
@@ -129,7 +132,6 @@ def onIncommingMessages(message):
     command = message.text
     if ("/" in command):
         command = opers.get_command(message.text)
-    configapi.write_json(data=message.chat.__dict__, fileName="telemessage")
     if ((command is not None) and command == 404):
         command_is_unknown(message)
     elif (command == "stop"):
@@ -143,7 +145,7 @@ def onIncommingMessages(message):
     else:
         if(configapi.check_command_in_work(clients_sections["TELEGRAM"], message.chat.id, command)):
             get_and_send_msg_text(
-                message, "Команда уже в процессе выполнения. Пожалуйста, завершите процесс выполнения действия команды /" + configapi.get_command_by_chat_id(clients_sections["TELEGRAM"], message.chat.id) +" или выполните это принудительно командой /stop")
+                message, "Команда уже в процессе выполнения. Пожалуйста, завершите процесс выполнения действия команды /" + configapi.get_command_by_chat_id(clients_sections["TELEGRAM"], message.chat.id) + " или выполните это принудительно командой /stop")
             return "ok"
         client.ChatId = str(message.chat.id)
         url = ""
@@ -170,13 +172,7 @@ def onIncommingMessages(message):
                         else:
                             configapi.create_or_update_current_command_item(
                                 message.chat.id, clients_sections, "TELEGRAM", command)
-
-                    configapi.write_json(clients_sections, "clients_sections")
-                    configapi.write_json(old_clients_sections,
-                                         "old_clients_sections")
-
                     if ("data" in response_result and response_result["data"]):
-                        configapi.write_json(response_result["data"], "data")
                         if ("actionList" in response_result["data"] and response_result["data"]["actionList"] is not None):
                             # GET_ACTIONS_FROM_RESPONE_IF_IS_EXISTS
                             key_board = types.InlineKeyboardMarkup()
@@ -184,10 +180,11 @@ def onIncommingMessages(message):
                                 keyAction = types.InlineKeyboardButton(
                                     text=item['name'], callback_data=item['code'])
                                 key_board.add(keyAction)
-                            configapi.write_json(
-                                data["actionList"], "response_action_list")
-                            get_and_send_msg_text(
-                                message, text=data["message"], keyboard=key_board)
+                            if (data["typeCode"] == "ACTION"):
+                                applyCommand(message, command)
+                            else:
+                                get_and_send_msg_text(
+                                    message, text=data["message"], keyboard=key_board)
                             # GET_ACTIONS_FROM_RESPONE_IF_IS_EXISTS_END
                         else:
                             get_and_send_msg_text(
@@ -205,7 +202,7 @@ def onIncommingMessages(message):
                     send_error_message_to_developer("UNKNOWN_ERROR")
             else:
                 send_error_message_to_developer(
-                    "CRITICAL_ERROR_ON_C#!!! CRITICAL_ERROR_ON_C#!!! CRITICAL_ERROR_ON_C#!!!\n\n\n" +
+                    "ERROR_ON_C#!!! ERROR_ON_C#!!! ERROR_ON_C#!!!\n\n\n" +
                     "CODE: " + str(response_result["code"]) +
                     "\n\nNAME_CODE: " + response_result["nameCode"] +
                     "\n\nTITLE: " + response_result["title"] +
@@ -229,7 +226,6 @@ def onIncommingMessages(message):
     #             server_error(message)
     #         else:
     #             if ("stepCode" in response_result):
-    #                 configapi.write_json(response_result)
     #                 if ("actionList" in response_result):
     #                     key_board = types.InlineKeyboardMarkup()
     #                     for item in response_result['actionList']:
@@ -273,6 +269,17 @@ def onIncommingMessages(message):
     #             message.from_user.id, "Ошибка сервера. Просим прощения на досталвенные неудобства.")
 
 
+# @teleBot.message_handler(commands=['calendar'])
+# def get_calendar(message):
+#     now = datetime.datetime.now()  # Текущая дата
+#     chat_id = message.chat.id
+#     date = (now.year, now.month)
+#     current_shown_dates[chat_id] = date  # Сохраним текущую дату в словарь
+#     markup = create_calendar(now.year, now.month)
+#     bot.send_message(
+#         message.chat.id, "Пожалйста, выберите дату", reply_markup=markup)
+
+
 @teleBot.callback_query_handler(func=lambda call: True)
 def callback_worker(call):
     if ("ROLE_IS_" in call.data):
@@ -290,6 +297,133 @@ def callback_worker(call):
         teleBot.send_message(chat_id=call.message.chat.id,
                              text="Чтобы прервать регистрацию введите /stop")
         client_reg(call.message)
+    if ("calendar" in call.data):
+        name, action, year, month, day = call.data.split(":")
+        current = datetime(int(year), int(month), 1)
+        if action == "MONTH":
+            teleBot.edit_message_text(
+                text=call.message.text,
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                reply_markup=telebot_calendar.create_calendar(
+                    name=name, year=int(year), month=int(month)),
+            )
+            return None
+        elif action == "MONTHS":
+            teleBot.edit_message_text(
+                text=call.message.text,
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                reply_markup=telebot_calendar.create_months_calendar(
+                    name=name, year=current.year),
+            )
+            return None
+        elif (action == "CANCEL"):
+            configapi.create_or_update_current_command_item(
+                call.message.chat.id, clients_sections, "TELEGRAM", inWork=False)
+            teleBot.edit_message_text(chat_id=call.message.chat.id,
+                                                message_id=call.message.message_id, text=".")
+            get_and_send_msg_text(
+                call.message, "Процесс постановки задачи остановлен.")
+        elif action == "PREVIOUS-MONTH":
+            preview_month = current - timedelta(days=1)
+            teleBot.edit_message_text(
+                text=call.message.text,
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                reply_markup=telebot_calendar.create_calendar(
+                    name=name, year=int(preview_month.year), month=int(preview_month.month)
+                ),
+            )
+            return None
+        elif action == "NEXT-MONTH":
+            next_month = current + timedelta(days=31)
+            teleBot.edit_message_text(
+                text=call.message.text,
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                reply_markup=telebot_calendar.create_calendar(
+                    name=name, year=int(next_month.year), month=int(next_month.month)
+                ),
+            )
+            return None
+        elif (action == "DAY"):
+            current_command = configapi.get_command_by_chat_id(
+                clients_sections["TELEGRAM"], call.message.chat.id)
+            isInWork = configapi.check_command_in_work(
+                clients_sections["TELEGRAM"], call.message.chat.id, current_command)
+            if (isInWork):
+                if (current_command == "newtask"):
+                    new_assigned_task.Year = int(year)
+                    new_assigned_task.Month = int(month)
+                    new_assigned_task.Day = int(day)
+                    try:
+                        teleBot.edit_message_text(chat_id=call.message.chat.id,
+                                                  message_id=call.message.message_id, text="Вы уже выбрали срок сдачи: " + day + "." + month + "." + year)
+                    except OSError as e:
+                        logger.error(e)
+                    create_new_task(call.message)
+                    # get_and_send_msg_text(
+                    #     call.message, "Отлично! Ожидайте ответа...", 2, create_new_task)
+
+
+def applyCommand(message, command):
+    if (command == "newtask"):
+        applyNewTask(message)
+    pass
+
+
+def applyNewTask(message):
+    get_and_send_msg_text(message, "Опишите задачу: ", 1, get_task_description)
+
+
+def get_task_description(message):
+    msgText = get_and_send_msg_text(message, type_s=6)
+    if (msgText.__len__() > 10):
+        now = datetime.now()  # Get the current date
+        month_keyboard = telebot_calendar.create_calendar(
+            year=now.year,
+            month=now.month,  # Specify the NAME of your calendar
+        )
+        new_assigned_task.Text = get_and_send_msg_text(
+            message, "Выберите срок сдачи: ", keyboard=month_keyboard)
+    else:
+        get_and_send_msg_text(message, "Слишком короткое описание. Опишите задачу: ",
+                              1, get_task_description)
+
+
+def create_new_task(message):
+    headers = {'Content-type': 'application/json',
+               'Accept': 'text/plain',
+               'Content-Encoding': 'utf-8'}
+    response_result = opers.ExecuteActions(
+        url=configapi.CSHARP_API_BOT_URL + "createTask" +
+        "?channel=TELEGRAM&chatId=" + str(message.chat.id),
+        reqstType='POST', headers=headers, sending_body=new_assigned_task)
+    if (response_result == "REQUEST_ERROR"):
+        server_error(message)
+        send_error_message_to_developer(response_result)
+    else:
+        if (response_result["code"] == 200):
+            if ("status_code" in response_result):
+                server_error(message)
+            else:
+                get_and_send_msg_text(
+                    message,
+                    "Отлично! Задача поставлена. Ожидайте ответ об выполнении рассылки.")
+                configapi.write_json(
+                    response_result["data"], "______________123")
+                ApplyTaskSending(response_result["data"], teleBot)
+                get_and_send_msg_text(
+                    message,
+                    "Рассылка выполнена. Студенты осведомлены")
+
+        else:
+            get_and_send_msg_text(
+                message, response_result["message"])
+    configapi.create_or_update_current_command_item(
+        message.chat.id, clients_sections, "TELEGRAM", "newtask", False)
+    return response_result
 
 
 # ENROLLEE
@@ -417,7 +551,8 @@ def get_and_send_msg_text(message, text=None, type_s=0, func=None, keyboard=None
     # type_s = 3 - отправка сообщения и клавиатуры
     # type_s = 4 - отправка сообщения и клавиатуры, выполнение функции
     # type_s = 5 - отправка сообщения без проверки команды
-    if (type_s != 5):
+    # type_s = 6 - получени сообщения и проверка команды
+    if (type_s != 5 and type_s != 6):
         if (func is None and keyboard is None):
             type_s = 0
         if (text is not None and func is not None and keyboard is None and type_s != 2):
@@ -455,39 +590,40 @@ def get_and_send_msg_text(message, text=None, type_s=0, func=None, keyboard=None
                 #         message.chat.id, "Вы уже в процессе выполнения команды. Чтобы остановить процесс необходимо написать /stop")
 
     print("\n")
-    try:
-        if (not isProcessStopped):
-            if (type_s == 0 or type_s == 5):
-                teleBot.send_message(message.chat.id, text)
-            elif type_s == 1:
-                if(func is not None):
-                    teleBot.register_next_step_handler(
-                        message, func)
+    if (type_s != 6):
+        try:
+            if (not isProcessStopped):
+                if (type_s == 0 or type_s == 5):
                     teleBot.send_message(message.chat.id, text)
+                elif type_s == 1:
+                    if(func is not None):
+                        teleBot.register_next_step_handler(
+                            message, func)
+                        teleBot.send_message(message.chat.id, text)
+                    else:
+                        server_error(message)
+                elif (type_s == 2):
+                    response = func(message)
+                    if("REQUEST_ERROR" in response):
+                        send_error_message_to_developer(response[:250:])
+                    else:
+                        teleBot.send_message(message.chat.id, text)
+
+                elif (type_s == 3):
+                    teleBot.send_message(message.from_user.id,
+                                         text=text, reply_markup=keyboard)
+                elif (type_s == 4):
+                    func(message)
+                    teleBot.send_message(message.from_user.id,
+                                         text=text, reply_markup=keyboard)
                 else:
                     server_error(message)
-            elif (type_s == 2):
-                response = func(message)
-                if("REQUEST_ERROR" in response):
-                    send_error_message_to_developer(response[:250:])
-                else:
-                    teleBot.send_message(message.chat.id, text)
-
-            elif (type_s == 3):
-                teleBot.send_message(message.from_user.id,
-                                     text=text, reply_markup=keyboard)
-            elif (type_s == 4):
-                func(message)
-                teleBot.send_message(message.from_user.id,
-                                     text=text, reply_markup=keyboard)
-            else:
-                server_error(message)
-    except OSError as e:
-        send_error_message_to_developer(str(e))
-        teleBot.send_message(
-            message.chat.id, "Неизвестная ошибка. Просим прощения за предоставленные нами неудобства")
-    finally:
-        print("SENDING_MESSAGE_FINISHED!\n")
+        except OSError as e:
+            send_error_message_to_developer(str(e))
+            teleBot.send_message(
+                message.chat.id, "Неизвестная ошибка. Просим прощения за предоставленные нами неудобства")
+        finally:
+            print("SENDING_MESSAGE_FINISHED!\n")
     return message.text
 
 

@@ -2,7 +2,7 @@
   "TELEGRAM": [
     {
       "chatId": 757051459,
-      "command": "help",
+      "command": "specs",
       "inWork": false
     }
   ],

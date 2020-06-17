@@ -79,3 +79,12 @@ def ApplySending(data=None, teleBot=None, vkBot=None):
                         if (("vkChatId" in student) and (student["vkChatId"] is not None)):
                             vkBot.messages.send(access_token="eee2e56af72e125b7511d765e3920fb247a002787383b55bbdd893e886526999e189ae920e8ecc441a03b",
                                                 user_id=student["vkChatId"], message=data["text"], attachment="photo" + sending_file["ownerId"]["id"])
+
+
+def ApplyTaskSending(data=None, teleBot=None):
+    if ("studentList" in data):
+        for student in data["studentList"]:
+            if (("teleChatId" in student) and (student["teleChatId"] is not None)):
+                teleBot.send_message(
+                    student["teleChatId"], f'ЗАДАЧА\nАвтор: {data["assignedTask"]["teacherFullName"]}\nОписание: {data["assignedTask"]["text"]}\nСрок сдачи: {data["assignedTask"]["finishDate"]}')
+    return 'ok'

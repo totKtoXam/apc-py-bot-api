@@ -1,1 +1,47 @@
-[]
+[
+  {
+    "prevCmdId": "00000000-0000-0000-0000-000000000000",
+    "prevCmdCode": null,
+    "currentCmdId": "a699ddab-c8b2-4bcd-a62e-29d1dc692e30",
+    "currentCmdCode": "start",
+    "currentCmdCond": "on_start_to_reg",
+    "currentCmdDesc": "процесс регистрации",
+    "nextCmdId": "00000000-0000-0000-0000-000000000000",
+    "nextCmdCode": null,
+    "isEdit": true,
+    "id": "10f1c3b0-fcfe-4996-bb38-1886efea5d34",
+    "name": "студент",
+    "code": "ROLE_IS_STUDENT",
+    "condition": "ROLE_IS_STUDENT"
+  },
+  {
+    "prevCmdId": "00000000-0000-0000-0000-000000000000",
+    "prevCmdCode": null,
+    "currentCmdId": "a699ddab-c8b2-4bcd-a62e-29d1dc692e30",
+    "currentCmdCode": "start",
+    "currentCmdCond": "on_start_to_reg",
+    "currentCmdDesc": "процесс регистрации",
+    "nextCmdId": "00000000-0000-0000-0000-000000000000",
+    "nextCmdCode": null,
+    "isEdit": true,
+    "id": "465495dc-e198-4f67-bbb6-474fa3d99d92",
+    "name": "преподаватель",
+    "code": "ROLE_IS_TEACHER",
+    "condition": "ROLE_IS_TEACHER"
+  },
+  {
+    "prevCmdId": "00000000-0000-0000-0000-000000000000",
+    "prevCmdCode": null,
+    "currentCmdId": "a699ddab-c8b2-4bcd-a62e-29d1dc692e30",
+    "currentCmdCode": "start",
+    "currentCmdCond": "on_start_to_reg",
+    "currentCmdDesc": "процесс регистрации",
+    "nextCmdId": "00000000-0000-0000-0000-000000000000",
+    "nextCmdCode": null,
+    "isEdit": true,
+    "id": "88c4c7df-494b-42a6-af53-b1d5a23de9de",
+    "name": "абитуриент",
+    "code": "ROLE_IS_ENROLLEE",
+    "condition": "ROLE_IS_ENROLLEE"
+  }
+]

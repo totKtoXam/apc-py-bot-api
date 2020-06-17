@@ -8,7 +8,7 @@ TELE_BOT_NAME = "AstanaPolytechCollegeBot"
 TELE_BOT_PROFILE_URL = "https://t.me/AstanaPolytechCollegeBot"
 
 VK_API_KEY = "eee2e56af72e125b7511d765e3920fb247a002787383b55bbdd893e886526999e189ae920e8ecc441a03b"
-SERVER_COMFIRMATION_KEY = "8aeaa9c1"
+SERVER_COMFIRMATION_KEY = "e404e1dd"
 SERVER_SECRET_KEY = "FF4DDB22A5AD7A7853E74B2FDB524"
 
 DEV_CHAT_ID = 757051459
@@ -19,7 +19,7 @@ startLog = "|LOG_START|"
 CSHARP_API_URL = "https://localhost:7001/api/"
 CSHARP_API_BOT_URL = "https://localhost:7001/api/bot/"  # local
 
-DEV_URL = "https://747df95f7c5d.ngrok.io/"
+DEV_URL = "https://df3ff5eb13dc.ngrok.io/"
 
 LOCAL_COMMANDS = ["/getimg", "/test"]
 
